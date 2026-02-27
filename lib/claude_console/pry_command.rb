@@ -3,12 +3,14 @@
 require "claude_console/command_logic"
 
 module ClaudeConsole
-  class Command < IRB::Command::Base
+  class PryCommand < Pry::ClassCommand
     include CommandLogic
 
-    category "Claude"
+    match "claude"
+    group "Claude"
     description "Pair with Claude in the console (no quotes needed)"
-    help_message <<~HELP
+
+    banner <<~HELP
       Usage: claude <your prompt here>
 
       Claude can run Ruby code in your session and see the results.
@@ -19,10 +21,9 @@ module ClaudeConsole
         claude help me debug the email delivery for this tenant
     HELP
 
-    def execute(arg)
-      prompt = arg.to_s.strip
-      workspace_binding = irb_context.workspace.binding
-      run_claude(prompt, workspace_binding)
+    def process(args)
+      prompt = args.join(" ").strip
+      run_claude(prompt, target)
     end
 
     private
@@ -30,8 +31,8 @@ module ClaudeConsole
     def build_context
       lines = []
 
-      if defined?(Reline::HISTORY) && Reline::HISTORY.respond_to?(:to_a)
-        history = Reline::HISTORY.to_a.last(20)
+      if Pry.history.respond_to?(:to_a)
+        history = Pry.history.to_a.last(20)
         unless history.empty?
           lines << "Recent console history:"
           history.each { |h| lines << "  >> #{h}" }
