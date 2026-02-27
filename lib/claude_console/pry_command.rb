@@ -21,8 +21,8 @@ module ClaudeConsole
         claude help me debug the email delivery for this tenant
     HELP
 
-    def process(args)
-      prompt = args.join(" ").strip
+    def process(_args)
+      prompt = arg_string.to_s.strip
       run_claude(prompt, target)
     end
 
