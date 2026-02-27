@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "open3"
+require "json"
 
 module ClaudeConsole
   class Command < IRB::Command::Base
@@ -48,10 +49,22 @@ module ClaudeConsole
         return
       end
 
-      process_response(stdout, workspace_binding)
+      text = parse_response(stdout)
+      return if text.nil?
+
+      process_response(text, workspace_binding)
     end
 
     private
+
+    def parse_response(stdout)
+      data = JSON.parse(stdout)
+      ClaudeConsole.session_id = data["session_id"] if data["session_id"]
+      data["result"].to_s
+    rescue JSON::ParserError
+      warn "Failed to parse Claude response"
+      nil
+    end
 
     def process_response(response, workspace_binding)
       parts = response.split(/(```ruby\n.*?```)/m)

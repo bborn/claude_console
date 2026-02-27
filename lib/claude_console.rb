@@ -20,8 +20,39 @@ module ClaudeConsole
     You can define methods, assign variables — they persist in the session.
   PROMPT
 
+  def self.environment_context
+    lines = []
+
+    if defined?(Rails)
+      env = Rails.env
+      lines << "Rails environment: #{env}"
+      lines << "Rails version: #{Rails.version}"
+      lines << "Ruby version: #{RUBY_VERSION}"
+      lines << "Application: #{Rails.application.class.module_parent_name}" if Rails.application
+
+      if env.production?
+        lines << ""
+        lines << "⚠️  PRODUCTION ENVIRONMENT — Exercise extreme caution:"
+        lines << "  - DO NOT run destructive operations (delete, destroy, update_all) without explicit user confirmation"
+        lines << "  - Prefer read-only queries unless the user specifically asks to mutate data"
+        lines << "  - Always scope writes to the smallest possible dataset"
+        lines << "  - Show the records that would be affected BEFORE making changes"
+      elsif env.staging?
+        lines << ""
+        lines << "⚠️  STAGING ENVIRONMENT — Be careful with data mutations, this may mirror production."
+      end
+
+      if defined?(ActiveRecord::Base)
+        db_config = ActiveRecord::Base.connection_db_config
+        lines << "Database: #{db_config.adapter}#{db_config.database ? " (#{db_config.database})" : ""}"
+      end
+    end
+
+    lines.join("\n")
+  end
+
   class << self
-    attr_accessor :system_prompt
+    attr_accessor :system_prompt, :session_id
     attr_writer :cli_path
 
     # Env vars to clear so claude uses its own stored auth
@@ -45,7 +76,23 @@ module ClaudeConsole
     end
 
     def command
-      [cli_path, "-p", "--system-prompt", system_prompt || SYSTEM_PROMPT, "--output-format", "text"]
+      cmd = [cli_path, "-p"]
+
+      if session_id
+        cmd.push("--resume", session_id)
+      else
+        prompt = system_prompt || SYSTEM_PROMPT
+        env_ctx = environment_context
+        prompt = "#{prompt}\n## Environment\n#{env_ctx}" unless env_ctx.empty?
+        cmd.push("--system-prompt", prompt)
+      end
+
+      cmd.push("--output-format", "json")
+      cmd
+    end
+
+    def reset_session!
+      @session_id = nil
     end
   end
 end

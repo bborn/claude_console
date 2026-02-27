@@ -1,6 +1,10 @@
 require "test_helper"
 
 class ClaudeConsoleTest < Minitest::Test
+  def setup
+    ClaudeConsole.reset_session!
+  end
+
   def test_version
     assert ClaudeConsole::VERSION
   end
@@ -18,13 +22,18 @@ class ClaudeConsoleTest < Minitest::Test
   end
 
   def test_default_system_prompt
-    assert_includes ClaudeConsole.command, ClaudeConsole::SYSTEM_PROMPT
+    cmd = ClaudeConsole.command
+    idx = cmd.index("--system-prompt")
+    assert idx, "command should include --system-prompt"
+    assert_includes cmd[idx + 1], "senior Rails developer"
   end
 
   def test_custom_system_prompt
     original = ClaudeConsole.system_prompt
     ClaudeConsole.system_prompt = "You are a test bot"
-    assert_includes ClaudeConsole.command, "You are a test bot"
+    cmd = ClaudeConsole.command
+    idx = cmd.index("--system-prompt")
+    assert_equal "You are a test bot", cmd[idx + 1]
   ensure
     ClaudeConsole.system_prompt = original
   end
@@ -44,12 +53,32 @@ class ClaudeConsoleTest < Minitest::Test
     ClaudeConsole.clear_env_vars = original
   end
 
-  def test_command_structure
+  def test_command_uses_json_output
     cmd = ClaudeConsole.command
-    assert_equal "claude", cmd[0]
-    assert_equal "-p", cmd[1]
-    assert_equal "--system-prompt", cmd[2]
-    assert_equal "--output-format", cmd[4]
-    assert_equal "text", cmd[5]
+    idx = cmd.index("--output-format")
+    assert idx
+    assert_equal "json", cmd[idx + 1]
+  end
+
+  def test_command_without_session_uses_system_prompt
+    cmd = ClaudeConsole.command
+    assert_includes cmd, "--system-prompt"
+    refute_includes cmd, "--resume"
+  end
+
+  def test_command_with_session_uses_resume
+    ClaudeConsole.session_id = "test-session-123"
+    cmd = ClaudeConsole.command
+    assert_includes cmd, "--resume"
+    assert_includes cmd, "test-session-123"
+    refute_includes cmd, "--system-prompt"
+  ensure
+    ClaudeConsole.reset_session!
+  end
+
+  def test_reset_session
+    ClaudeConsole.session_id = "abc"
+    ClaudeConsole.reset_session!
+    assert_nil ClaudeConsole.session_id
   end
 end
