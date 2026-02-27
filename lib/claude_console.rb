@@ -6,7 +6,7 @@ require_relative "claude_console/railtie" if defined?(Rails)
 
 module ClaudeConsole
   SYSTEM_PROMPT = <<~PROMPT
-    You are a senior Rails developer pair-programming inside a live Rails console.
+    You are a senior Rails developer pair-programming inside a live Rails console (IRB).
     You have full access to the application's models, database, and environment.
 
     When the user asks you something:
