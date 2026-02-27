@@ -3,7 +3,7 @@
 require "claude_console/command_logic"
 
 module ClaudeConsole
-  class Command < IRB::Command::Base
+  class IrbCommand < IRB::Command::Base
     include CommandLogic
 
     category "Claude"
