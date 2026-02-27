@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "claude_console/version"
+require_relative "claude_console/transcript"
 
 require_relative "claude_console/railtie" if defined?(Rails)
 
@@ -52,8 +53,15 @@ module ClaudeConsole
   end
 
   class << self
-    attr_accessor :system_prompt, :session_id
+    attr_accessor :system_prompt, :session_id, :transcript
     attr_writer :cli_path
+
+    def install_transcript!
+      return if @transcript
+
+      @transcript = Transcript.new($stdout)
+      $stdout = @transcript
+    end
 
     # Env vars to clear so claude uses its own stored auth
     def clean_env

@@ -7,6 +7,7 @@ module ClaudeConsole
       require "irb/command"
       require "claude_console/command"
       IRB::Command.register(:claude, ClaudeConsole::Command)
+      ClaudeConsole.install_transcript!
     end
   end
 end

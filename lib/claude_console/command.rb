@@ -36,23 +36,29 @@ module ClaudeConsole
       puts "Asking Claude..."
       puts
 
-      stdout, stderr, status = Open3.capture3(
-        ClaudeConsole.clean_env,
-        *ClaudeConsole.command,
-        full_prompt
-      )
+      ClaudeConsole.transcript&.pause
 
-      unless status.success?
-        warn "Claude error (exit #{status.exitstatus}):"
-        warn stderr unless stderr.empty?
-        warn stdout unless stdout.empty?
-        return
+      begin
+        stdout, stderr, status = Open3.capture3(
+          ClaudeConsole.clean_env,
+          *ClaudeConsole.command,
+          full_prompt
+        )
+
+        unless status.success?
+          warn "Claude error (exit #{status.exitstatus}):"
+          warn stderr unless stderr.empty?
+          warn stdout unless stdout.empty?
+          return
+        end
+
+        text = parse_response(stdout)
+        return if text.nil?
+
+        process_response(text, workspace_binding)
+      ensure
+        ClaudeConsole.transcript&.resume
       end
-
-      text = parse_response(stdout)
-      return if text.nil?
-
-      process_response(text, workspace_binding)
     end
 
     private
@@ -92,8 +98,13 @@ module ClaudeConsole
     end
 
     def build_context
-      lines = []
+      transcript = ClaudeConsole.transcript&.flush_transcript
+      unless transcript.nil? || transcript.strip.empty?
+        return "Console transcript (input + output):\n#{transcript}"
+      end
 
+      # Fallback: use input history if transcript capture isn't installed
+      lines = []
       if defined?(Reline::HISTORY) && Reline::HISTORY.respond_to?(:to_a)
         history = Reline::HISTORY.to_a.last(20)
         unless history.empty?
@@ -101,7 +112,6 @@ module ClaudeConsole
           history.each { |h| lines << "  >> #{h}" }
         end
       end
-
       lines.join("\n")
     end
   end
