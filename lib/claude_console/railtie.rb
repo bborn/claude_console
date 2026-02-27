@@ -9,7 +9,7 @@ module ClaudeConsole
       else
         require "irb"
         require "irb/command"
-        require "claude_console/irb_command"
+        require "claude_console/command"
         IRB::Command.register(:claude, ClaudeConsole::Command)
       end
     end
