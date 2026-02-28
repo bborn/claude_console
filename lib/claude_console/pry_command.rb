@@ -3,24 +3,25 @@
 require "claude_console/command_logic"
 
 module ClaudeConsole
-  class Command < IRB::Command::Base
+  class PryCommand < Pry::ClassCommand
     include CommandLogic
 
-    category "Claude"
+    match "claude"
+    group "Claude"
     description "Pair with Claude in the console (no quotes needed)"
-    help_message CommandLogic::HELP_TEXT
+    banner CommandLogic::HELP_TEXT
 
-    def execute(arg)
-      prompt = arg.to_s.strip
-      run_claude(prompt, irb_context.workspace.binding)
+    def process(_args)
+      prompt = arg_string.to_s.strip
+      run_claude(prompt, target)
     end
 
     private
 
     def history_context
       lines = []
-      if defined?(Reline::HISTORY) && Reline::HISTORY.respond_to?(:to_a)
-        history = Reline::HISTORY.to_a.last(20)
+      if Pry.history.respond_to?(:to_a)
+        history = Pry.history.to_a.last(20)
         unless history.empty?
           lines << "Recent console history:"
           history.each { |h| lines << "  >> #{h}" }
